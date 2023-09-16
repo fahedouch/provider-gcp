@@ -1,8 +1,9 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: clusters.container.gcp.crossplane.io
 spec:
@@ -88,9 +89,9 @@ spec:
                             type: boolean
                           loadBalancerType:
                             description: "LoadBalancerType: Which load balancer type
-                              is installed for Cloud Run. \n Possible values:   \"LOAD_BALANCER_TYPE_UNSPECIFIED\"
-                              - Load balancer type for Cloud Run is unspecified.   \"LOAD_BALANCER_TYPE_EXTERNAL\"
-                              - Install external load balancer for Cloud Run.   \"LOAD_BALANCER_TYPE_INTERNAL\"
+                              is installed for Cloud Run. \n Possible values: \"LOAD_BALANCER_TYPE_UNSPECIFIED\"
+                              - Load balancer type for Cloud Run is unspecified. \"LOAD_BALANCER_TYPE_EXTERNAL\"
+                              - Install external load balancer for Cloud Run. \"LOAD_BALANCER_TYPE_INTERNAL\"
                               - Install internal load balancer for Cloud Run."
                             type: string
                         required:
@@ -215,8 +216,8 @@ spec:
                     properties:
                       autoprovisioningLocations:
                         description: 'AutoprovisioningLocations: The list of Google
-                          Compute Engine [zones](/compute/docs/zones#available) in
-                          which the NodePool''s nodes can be created by NAP.'
+                          Compute Engine [zones](https://cloud.google.com/compute/docs/zones#available)
+                          in which the NodePool''s nodes can be created by NAP.'
                         items:
                           type: string
                         type: array
@@ -326,6 +327,16 @@ spec:
                                 type: integer
                             type: object
                         type: object
+                      autoscalingProfile:
+                        description: "AutoscalingProfile: Defines which profile the
+                          cluster autoscaler uses to decide when to remove a node.
+                          \n Possible values: \"BALANCED\" - the default profile which
+                          prioritizes availability of resources. \"OPTIMIZE_UTILIZATION\"
+                          - prioritizes optimizing the utilization of resources."
+                        enum:
+                        - BALANCED
+                        - OPTIMIZE_UTILIZATION
+                        type: string
                       enableNodeAutoprovisioning:
                         description: 'EnableNodeAutoprovisioning: Enables automatic
                           node pool creation and deletion.'
@@ -394,11 +405,10 @@ spec:
                         type: string
                       state:
                         description: "State: Denotes the state of etcd encryption.
-                          \n Possible values:   \"UNKNOWN\" - Should never be set
-                          \  \"ENCRYPTED\" - Secrets in etcd are encrypted.   \"DECRYPTED\"
-                          - Secrets in etcd are stored in plain text (at etcd level)
-                          - this is unrelated to Google Compute Engine level full
-                          disk encryption."
+                          \n Possible values: \"UNKNOWN\" - Should never be set \"ENCRYPTED\"
+                          - Secrets in etcd are encrypted. \"DECRYPTED\" - Secrets
+                          in etcd are stored in plain text (at etcd level) - this
+                          is unrelated to Google Compute Engine level full disk encryption."
                         type: string
                     type: object
                   defaultMaxPodsConstraint:
@@ -555,12 +565,12 @@ spec:
                     type: object
                   location:
                     description: 'Location: The name of the Google Compute Engine
-                      [zone](/compute/docs/regions-zones/regions-zones#available)
-                      or [region](/compute/docs/regions-zones/regions-zones#available)
+                      [zone](https://cloud.google.com/compute/docs/regions-zones/regions-zones#available)
+                      or [region](https://cloud.google.com/compute/docs/regions-zones/regions-zones#available)
                       in which the cluster resides.'
                     type: string
                   locations:
-                    description: 'Locations: The list of Google Compute Engine [zones](/compute/docs/zones#available)
+                    description: 'Locations: The list of Google Compute Engine [zones](https://cloud.google.com/compute/docs/zones#available)
                       in which the cluster''s nodes should be located.'
                     items:
                       type: string
@@ -726,7 +736,7 @@ spec:
                       be used."
                     type: string
                   network:
-                    description: 'Network: The name of the Google Compute Engine [network](/compute/docs/networks-and-firewalls#networks)
+                    description: 'Network: The name of the Google Compute Engine [network](https://cloud.google.com/vpc/docs/vpc#vpc_networks_and_subnets)
                       to which the cluster is connected. If left unspecified, the
                       `default` network will be used.'
                     type: string
@@ -736,12 +746,12 @@ spec:
                       datapathProvider:
                         description: "DatapathProvider: The desired datapath provider
                           for this cluster. By default, uses the IPTables-based kube-proxy
-                          implementation. \n Possible values:   \"DATAPATH_PROVIDER_UNSPECIFIED\"
-                          - Default value.   \"LEGACY_DATAPATH\" - Use the IPTables
-                          implementation based on kube-proxy.   \"ADVANCED_DATAPATH\"
+                          implementation. \n Possible values: \"DATAPATH_PROVIDER_UNSPECIFIED\"
+                          - Default value. \"LEGACY_DATAPATH\" - Use the IPTables
+                          implementation based on kube-proxy. \"ADVANCED_DATAPATH\"
                           - Use the eBPF based GKE Dataplane V2 with additional features.
-                          See the [GKE Dataplane V2 documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/
-                          dataplane-v2) for more."
+                          See the [GKE Dataplane V2 documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/dataplane-v2)
+                          for more."
                         type: string
                       defaultSnatStatus:
                         description: 'DefaultSnatStatus: Whether the cluster disables
@@ -757,6 +767,37 @@ spec:
                         required:
                         - disabled
                         type: object
+                      dnsConfig:
+                        description: DNSConfig contains the desired set of options
+                          for configuring clusterDNS.
+                        properties:
+                          clusterDns:
+                            description: 'ClusterDns indicates which in-cluster DNS
+                              provider should be used. Possible values: "PROVIDER_UNSPECIFIED"
+                              - indicates the default value. "PLATFORM_DEFAULT" -
+                              indicates using the GKE default DNS provider(kube-dns)
+                              for DNS resolution. "CLOUD_DNS" - indicates using CloudDNS
+                              for DNS resolution.'
+                            enum:
+                            - PROVIDER_UNSPECIFIED
+                            - PLATFORM_DEFAULT
+                            - CLOUD_DNS
+                            type: string
+                          clusterDnsDomain:
+                            description: ClusterDnsDomain is the suffix used for all
+                              cluster service records.
+                            type: string
+                          clusterDnsScope:
+                            description: 'ClusterDnsScope indicates the scope of access
+                              to cluster DNS records. Possible Values: "DNS_SCOPE_UNSPECIFIED"
+                              - indicates the default value, will be inferred as cluster
+                              scope. "VPC_SCOPE" - indicates that DNS records are
+                              accessible from within the VPC.'
+                            enum:
+                            - DNS_SCOPE_UNSPECIFIED
+                            - VPC_SCOPE
+                            type: string
+                        type: object
                       enableIntraNodeVisibility:
                         description: 'EnableIntraNodeVisibility: Whether Intra-node
                           visibility is enabled for this cluster. This makes same
@@ -766,12 +807,12 @@ spec:
                         description: "PrivateIpv6GoogleAccess: The desired state of
                           IPv6 connectivity to Google Services. By default, no private
                           IPv6 access to or from Google Services (all access will
-                          be via IPv4) \n Possible values:   \"PRIVATE_IPV6_GOOGLE_ACCESS_UNSPECIFIED\"
-                          - Default value. Same as DISABLED   \"PRIVATE_IPV6_GOOGLE_ACCESS_DISABLED\"
-                          - No private access to or from Google Services   \"PRIVATE_IPV6_GOOGLE_ACCESS_TO_GOOGLE\"
+                          be via IPv4) \n Possible values: \"PRIVATE_IPV6_GOOGLE_ACCESS_UNSPECIFIED\"
+                          - Default value. Same as DISABLED \"PRIVATE_IPV6_GOOGLE_ACCESS_DISABLED\"
+                          - No private access to or from Google Services \"PRIVATE_IPV6_GOOGLE_ACCESS_TO_GOOGLE\"
                           - Enables private IPv6 access to Google Services from GKE
-                          \  \"PRIVATE_IPV6_GOOGLE_ACCESS_BIDIRECTIONAL\" - Enables
-                          priate IPv6 access to and from Google Services"
+                          \"PRIVATE_IPV6_GOOGLE_ACCESS_BIDIRECTIONAL\" - Enables priate
+                          IPv6 access to and from Google Services"
                         type: string
                     type: object
                   networkPolicy:
@@ -784,8 +825,8 @@ spec:
                         type: boolean
                       provider:
                         description: "Provider: The selected network policy provider.
-                          \n Possible values:   \"PROVIDER_UNSPECIFIED\" - Not set
-                          \  \"CALICO\" - Tigera (Calico Felix)."
+                          \n Possible values: \"PROVIDER_UNSPECIFIED\" - Not set \"CALICO\"
+                          - Tigera (Calico Felix)."
                         type: string
                     type: object
                   networkRef:
@@ -795,6 +836,31 @@ spec:
                       name:
                         description: Name of the referenced object.
                         type: string
+                      policy:
+                        description: Policies for referencing.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: Resolution specifies whether resolution of
+                              this reference is required. The default is 'Required',
+                              which means the reconcile will fail if the reference
+                              cannot be resolved. 'Optional' means this reference
+                              will be a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: Resolve specifies when this reference should
+                              be resolved. The default is 'IfNotPresent', which will
+                              attempt to resolve the reference only when the corresponding
+                              field is not present. Use 'Always' to resolve the reference
+                              on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
                     required:
                     - name
                     type: object
@@ -811,6 +877,31 @@ spec:
                           type: string
                         description: MatchLabels ensures an object with matching labels
                           is selected.
+                        type: object
+                      policy:
+                        description: Policies for selection.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: Resolution specifies whether resolution of
+                              this reference is required. The default is 'Required',
+                              which means the reconcile will fail if the reference
+                              cannot be resolved. 'Optional' means this reference
+                              will be a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: Resolve specifies when this reference should
+                              be resolved. The default is 'IfNotPresent', which will
+                              attempt to resolve the reference only when the corresponding
+                              field is not present. Use 'Always' to resolve the reference
+                              on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
                         type: object
                     type: object
                   notificationConfig:
@@ -873,15 +964,15 @@ spec:
                     properties:
                       channel:
                         description: "Channel: channel specifies which release channel
-                          the cluster is subscribed to. \n Possible values:   \"UNSPECIFIED\"
-                          - No channel specified.   \"RAPID\" - RAPID channel is offered
+                          the cluster is subscribed to. \n Possible values: \"UNSPECIFIED\"
+                          - No channel specified. \"RAPID\" - RAPID channel is offered
                           on an early access basis for customers who want to test
                           new releases. WARNING: Versions available in the RAPID Channel
                           may be subject to unresolved issues with no known workaround
-                          and are not subject to any SLAs.   \"REGULAR\" - Clusters
+                          and are not subject to any SLAs. \"REGULAR\" - Clusters
                           subscribed to REGULAR receive versions that are considered
                           GA quality. REGULAR is intended for production users who
-                          want to take advantage of new features.   \"STABLE\" - Clusters
+                          want to take advantage of new features. \"STABLE\" - Clusters
                           subscribed to STABLE receive versions that are known to
                           be stable and reliable in production."
                         type: string
@@ -930,8 +1021,8 @@ spec:
                     type: object
                   subnetwork:
                     description: 'Subnetwork: The name of the Google Compute Engine
-                      [subnetwork](/compute/docs/subnetworks) to which the cluster
-                      is connected.'
+                      [subnetwork](https://cloud.google.com/vpc/docs/subnets) to which
+                      the cluster is connected.'
                     type: string
                   subnetworkRef:
                     description: SubnetworkRef references to a Subnetwork and retrieves
@@ -940,6 +1031,31 @@ spec:
                       name:
                         description: Name of the referenced object.
                         type: string
+                      policy:
+                        description: Policies for referencing.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: Resolution specifies whether resolution of
+                              this reference is required. The default is 'Required',
+                              which means the reconcile will fail if the reference
+                              cannot be resolved. 'Optional' means this reference
+                              will be a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: Resolve specifies when this reference should
+                              be resolved. The default is 'IfNotPresent', which will
+                              attempt to resolve the reference only when the corresponding
+                              field is not present. Use 'Always' to resolve the reference
+                              on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
                     required:
                     - name
                     type: object
@@ -956,6 +1072,31 @@ spec:
                           type: string
                         description: MatchLabels ensures an object with matching labels
                           is selected.
+                        type: object
+                      policy:
+                        description: Policies for selection.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: Resolution specifies whether resolution of
+                              this reference is required. The default is 'Required',
+                              which means the reconcile will fail if the reference
+                              cannot be resolved. 'Optional' means this reference
+                              will be a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: Resolve specifies when this reference should
+                              be resolved. The default is 'IfNotPresent', which will
+                              attempt to resolve the reference only when the corresponding
+                              field is not present. Use 'Always' to resolve the reference
+                              on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
                         type: object
                     type: object
                   verticalPodAutoscaling:
@@ -990,6 +1131,31 @@ spec:
                   name:
                     description: Name of the referenced object.
                     type: string
+                  policy:
+                    description: Policies for referencing.
+                    properties:
+                      resolution:
+                        default: Required
+                        description: Resolution specifies whether resolution of this
+                          reference is required. The default is 'Required', which
+                          means the reconcile will fail if the reference cannot be
+                          resolved. 'Optional' means this reference will be a no-op
+                          if it cannot be resolved.
+                        enum:
+                        - Required
+                        - Optional
+                        type: string
+                      resolve:
+                        description: Resolve specifies when this reference should
+                          be resolved. The default is 'IfNotPresent', which will attempt
+                          to resolve the reference only when the corresponding field
+                          is not present. Use 'Always' to resolve the reference on
+                          every reconcile.
+                        enum:
+                        - Always
+                        - IfNotPresent
+                        type: string
+                    type: object
                 required:
                 - name
                 type: object
@@ -1001,6 +1167,105 @@ spec:
                   name:
                     description: Name of the referenced object.
                     type: string
+                  policy:
+                    description: Policies for referencing.
+                    properties:
+                      resolution:
+                        default: Required
+                        description: Resolution specifies whether resolution of this
+                          reference is required. The default is 'Required', which
+                          means the reconcile will fail if the reference cannot be
+                          resolved. 'Optional' means this reference will be a no-op
+                          if it cannot be resolved.
+                        enum:
+                        - Required
+                        - Optional
+                        type: string
+                      resolve:
+                        description: Resolve specifies when this reference should
+                          be resolved. The default is 'IfNotPresent', which will attempt
+                          to resolve the reference only when the corresponding field
+                          is not present. Use 'Always' to resolve the reference on
+                          every reconcile.
+                        enum:
+                        - Always
+                        - IfNotPresent
+                        type: string
+                    type: object
+                required:
+                - name
+                type: object
+              publishConnectionDetailsTo:
+                description: PublishConnectionDetailsTo specifies the connection secret
+                  config which contains a name, metadata and a reference to secret
+                  store config to which any connection details for this managed resource
+                  should be written. Connection details frequently include the endpoint,
+                  username, and password required to connect to the managed resource.
+                properties:
+                  configRef:
+                    default:
+                      name: default
+                    description: SecretStoreConfigRef specifies which secret store
+                      config should be used for this ConnectionSecret.
+                    properties:
+                      name:
+                        description: Name of the referenced object.
+                        type: string
+                      policy:
+                        description: Policies for referencing.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: Resolution specifies whether resolution of
+                              this reference is required. The default is 'Required',
+                              which means the reconcile will fail if the reference
+                              cannot be resolved. 'Optional' means this reference
+                              will be a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: Resolve specifies when this reference should
+                              be resolved. The default is 'IfNotPresent', which will
+                              attempt to resolve the reference only when the corresponding
+                              field is not present. Use 'Always' to resolve the reference
+                              on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    required:
+                    - name
+                    type: object
+                  metadata:
+                    description: Metadata is the metadata for connection secret.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations are the annotations to be added to
+                          connection secret. - For Kubernetes secrets, this will be
+                          used as "metadata.annotations". - It is up to Secret Store
+                          implementation for others store types.
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels are the labels/tags to be added to connection
+                          secret. - For Kubernetes secrets, this will be used as "metadata.labels".
+                          - It is up to Secret Store implementation for others store
+                          types.
+                        type: object
+                      type:
+                        description: Type is the SecretType for the connection secret.
+                          - Only valid for Kubernetes Secret Stores.
+                        type: string
+                    type: object
+                  name:
+                    description: Name is the name of the connection secret.
+                    type: string
                 required:
                 - name
                 type: object
@@ -1009,7 +1274,10 @@ spec:
                   and name of a Secret to which any connection details for this managed
                   resource should be written. Connection details frequently include
                   the endpoint, username, and password required to connect to the
-                  managed resource.
+                  managed resource. This field is planned to be replaced in a future
+                  release in favor of PublishConnectionDetailsTo. Currently, both
+                  could be set independently and connection details would be published
+                  to both without affecting each other.
                 properties:
                   name:
                     description: Name of the secret.
@@ -1040,12 +1308,12 @@ spec:
                       properties:
                         code:
                           description: "Code: Machine-friendly representation of the
-                            condition \n Possible values:   \"UNKNOWN\" - UNKNOWN
-                            indicates a generic condition.   \"GCE_STOCKOUT\" - GCE_STOCKOUT
-                            indicates a Google Compute Engine stockout.   \"GKE_SERVICE_ACCOUNT_DELETED\"
+                            condition \n Possible values: \"UNKNOWN\" - UNKNOWN indicates
+                            a generic condition. \"GCE_STOCKOUT\" - GCE_STOCKOUT indicates
+                            a Google Compute Engine stockout. \"GKE_SERVICE_ACCOUNT_DELETED\"
                             - GKE_SERVICE_ACCOUNT_DELETED indicates that the user
-                            deleted their robot service account.   \"GCE_QUOTA_EXCEEDED\"
-                            - Google Compute Engine quota was exceeded.   \"SET_BY_OPERATOR\"
+                            deleted their robot service account. \"GCE_QUOTA_EXCEEDED\"
+                            - Google Compute Engine quota was exceeded. \"SET_BY_OPERATOR\"
                             - Cluster state was manually changed by an SRE due to
                             a system logic error. More codes TBA"
                           type: string
@@ -1070,11 +1338,11 @@ spec:
                     format: int64
                     type: integer
                   currentNodeVersion:
-                    description: 'CurrentNodeVersion: Deprecated, use [NodePools.version](/kubernetes-engine/docs/reference/rest/v1/proj
-                      ects.zones.clusters.nodePools) instead. The current version
-                      of the node software components. If they are currently at multiple
-                      versions because they''re in the process of being upgraded,
-                      this reflects the minimum version of all nodes.'
+                    description: 'CurrentNodeVersion: Deprecated, use [NodePools.version](/kubernetes-engine/docs/reference/rest/v1/projects.zones.clusters.nodePools)
+                      instead. The current version of the node software components.
+                      If they are currently at multiple versions because they''re
+                      in the process of being upgraded, this reflects the minimum
+                      version of all nodes.'
                     type: string
                   endpoint:
                     description: "Endpoint: The IP address of this cluster's master
@@ -1089,8 +1357,8 @@ spec:
                     type: string
                   location:
                     description: 'Location: The name of the Google Compute Engine
-                      [zone](/compute/docs/regions-zones/regions-zones#available)
-                      or [region](/compute/docs/regions-zones/regions-zones#available)
+                      [zone](https://cloud.google.com/compute/docs/regions-zones/regions-zones#available)
+                      or [region](https://cloud.google.com/compute/docs/regions-zones/regions-zones#available)
                       in which the cluster resides.'
                     type: string
                   maintenancePolicy:
@@ -1119,13 +1387,13 @@ spec:
                     properties:
                       network:
                         description: 'Network: The relative name of the Google Compute
-                          Engine network(/compute/docs/networks-and-firewalls#networks)
+                          Engine network(https://cloud.google.com/vpc/docs/vpc#vpc_networks_and_subnets)
                           to which the cluster is connected. Example: projects/my-project/global/networks/my-network'
                         type: string
                       subnetwork:
                         description: 'Subnetwork: The relative name of the Google
-                          Compute Engine [subnetwork](/compute/docs/vpc) to which
-                          the cluster is connected. Example: projects/my-project/regions/us-central1/subnetworks/my-subnet'
+                          Compute Engine [subnetwork](https://cloud.google.com/vpc/docs/vpc)
+                          to which the cluster is connected. Example: projects/my-project/regions/us-central1/subnetworks/my-subnet'
                         type: string
                     type: object
                   nodeIpv4CidrSize:
@@ -1177,14 +1445,14 @@ spec:
                             properties:
                               code:
                                 description: "Code: Machine-friendly representation
-                                  of the condition \n Possible values:   \"UNKNOWN\"
-                                  - UNKNOWN indicates a generic condition.   \"GCE_STOCKOUT\"
+                                  of the condition \n Possible values: \"UNKNOWN\"
+                                  - UNKNOWN indicates a generic condition. \"GCE_STOCKOUT\"
                                   - GCE_STOCKOUT indicates a Google Compute Engine
-                                  stockout.   \"GKE_SERVICE_ACCOUNT_DELETED\" - GKE_SERVICE_ACCOUNT_DELETED
+                                  stockout. \"GKE_SERVICE_ACCOUNT_DELETED\" - GKE_SERVICE_ACCOUNT_DELETED
                                   indicates that the user deleted their robot service
-                                  account.   \"GCE_QUOTA_EXCEEDED\" - Google Compute
-                                  Engine quota was exceeded.   \"SET_BY_OPERATOR\"
-                                  - Cluster state was manually changed by an SRE due
+                                  account. \"GCE_QUOTA_EXCEEDED\" - Google Compute
+                                  Engine quota was exceeded. \"SET_BY_OPERATOR\" -
+                                  Cluster state was manually changed by an SRE due
                                   to a system logic error. More codes TBA"
                                 type: string
                               message:
@@ -1212,7 +1480,7 @@ spec:
                                   acceleratorType:
                                     description: 'AcceleratorType: The accelerator
                                       type resource name. List of supported accelerators
-                                      [here](/compute/docs/gpus/#Introduction)'
+                                      [here](https://cloud.google.com/compute/docs/gpus/#Introduction)'
                                     type: string
                                 type: object
                               type: array
@@ -1257,7 +1525,7 @@ spec:
                               type: integer
                             machineType:
                               description: "MachineType: The name of a Google Compute
-                                Engine [machine type](/compute/docs/machine-types)
+                                Engine [machine type](https://cloud.google.com/compute/docs/machine-types)
                                 (e.g. `n1-standard-1`). \n If unspecified, the default
                                 machine type is `n1-standard-1`."
                               type: string
@@ -1271,13 +1539,13 @@ spec:
                                 a URL in the metadata server. Additionally, to avoid
                                 ambiguity, keys must not conflict with any other metadata
                                 keys for the project or be one of the reserved keys:
-                                \ \"cluster-location\"  \"cluster-name\"  \"cluster-uid\"
-                                \ \"configure-sh\"  \"containerd-configure-sh\"  \"enable-oslogin\"
-                                \ \"gci-ensure-gke-docker\"  \"gci-update-strategy\"
-                                \ \"instance-template\"  \"kube-env\"  \"startup-script\"
-                                \ \"user-data\"  \"disable-address-manager\"  \"windows-startup-script-ps1\"
-                                \ \"common-psm1\"  \"k8s-node-setup-psm1\"  \"install-ssh-psm1\"
-                                \ \"user-profile-psm1\"  \"serial-port-logging-enable\"
+                                \"cluster-location\" \"cluster-name\" \"cluster-uid\"
+                                \"configure-sh\" \"containerd-configure-sh\" \"enable-oslogin\"
+                                \"gci-ensure-gke-docker\" \"gci-update-strategy\"
+                                \"instance-template\" \"kube-env\" \"startup-script\"
+                                \"user-data\" \"disable-address-manager\" \"windows-startup-script-ps1\"
+                                \"common-psm1\" \"k8s-node-setup-psm1\" \"install-ssh-psm1\"
+                                \"user-profile-psm1\" \"serial-port-logging-enable\"
                                 Values are free-form strings, and only have meaning
                                 as interpreted by the image running in the instance.
                                 The only restriction placed on them is that each value's
@@ -1376,9 +1644,9 @@ spec:
                                 properties:
                                   effect:
                                     description: "Effect: Effect for taint. \n Possible
-                                      values:   \"EFFECT_UNSPECIFIED\" - Not set   \"NO_SCHEDULE\"
-                                      - NoSchedule   \"PREFER_NO_SCHEDULE\" - PreferNoSchedule
-                                      \  \"NO_EXECUTE\" - NoExecute"
+                                      values: \"EFFECT_UNSPECIFIED\" - Not set \"NO_SCHEDULE\"
+                                      - NoSchedule \"PREFER_NO_SCHEDULE\" - PreferNoSchedule
+                                      \"NO_EXECUTE\" - NoExecute"
                                     type: string
                                   key:
                                     description: 'Key: Key for taint.'
@@ -1392,22 +1660,22 @@ spec:
                         initialNodeCount:
                           description: 'InitialNodeCount: The initial node count for
                             the pool. You must ensure that your Compute Engine <a
-                            href="/compute/docs/resource-quotas">resource quota</a>
-                            is sufficient for this number of instances. You must also
-                            have available firewall and routes quota.'
+                            href="https://cloud.google.com/compute/quotas">resource
+                            quota</a> is sufficient for this number of instances.
+                            You must also have available firewall and routes quota.'
                           format: int64
                           type: integer
                         instanceGroupUrls:
                           description: 'InstanceGroupUrls: The resource URLs of the
-                            [managed instance groups](/compute/docs/instance-groups/creating-groups-of-mana
-                            ged-instances) associated with this node pool.'
+                            [managed instance groups](https://cloud.google.com/compute/docs/instance-groups/creating-groups-of-managed-instances)
+                            associated with this node pool.'
                           items:
                             type: string
                           type: array
                         locations:
                           description: 'Locations: The list of Google Compute Engine
-                            [zones](/compute/docs/zones#available) in which the NodePool''s
-                            nodes should be located.'
+                            [zones](https://cloud.google.com/compute/docs/regions-zones#available)
+                            in which the NodePool''s nodes should be located.'
                           items:
                             type: string
                           type: array
@@ -1466,20 +1734,20 @@ spec:
                           type: string
                         status:
                           description: "Status: The status of the nodes in this pool
-                            instance. \n Possible values:   \"STATUS_UNSPECIFIED\"
-                            - Not set.   \"PROVISIONING\" - The PROVISIONING state
-                            indicates the node pool is being created.   \"RUNNING\"
-                            - The RUNNING state indicates the node pool has been created
-                            and is fully usable.   \"RUNNING_WITH_ERROR\" - The RUNNING_WITH_ERROR
+                            instance. \n Possible values: \"STATUS_UNSPECIFIED\" -
+                            Not set. \"PROVISIONING\" - The PROVISIONING state indicates
+                            the node pool is being created. \"RUNNING\" - The RUNNING
+                            state indicates the node pool has been created and is
+                            fully usable. \"RUNNING_WITH_ERROR\" - The RUNNING_WITH_ERROR
                             state indicates the node pool has been created and is
                             partially usable. Some error state has occurred and some
                             functionality may be impaired. Customer may need to reissue
-                            a request or trigger a new update.   \"RECONCILING\" -
-                            The RECONCILING state indicates that some work is actively
+                            a request or trigger a new update. \"RECONCILING\" - The
+                            RECONCILING state indicates that some work is actively
                             being done on the node pool, such as upgrading node software.
-                            Details can be found in the `statusMessage` field.   \"STOPPING\"
+                            Details can be found in the `statusMessage` field. \"STOPPING\"
                             - The STOPPING state indicates the node pool is being
-                            deleted.   \"ERROR\" - The ERROR state indicates the node
+                            deleted. \"ERROR\" - The ERROR state indicates the node
                             pool may be unusable. Details can be found in the `statusMessage`
                             field."
                           type: string
@@ -1517,18 +1785,18 @@ spec:
                     type: string
                   status:
                     description: "Status: The current status of this cluster. \n Possible
-                      values:   \"STATUS_UNSPECIFIED\" - Not set.   \"PROVISIONING\"
-                      - The PROVISIONING state indicates the cluster is being created.
-                      \  \"RUNNING\" - The RUNNING state indicates the cluster has
-                      been created and is fully usable.   \"RECONCILING\" - The RECONCILING
+                      values: \"STATUS_UNSPECIFIED\" - Not set. \"PROVISIONING\" -
+                      The PROVISIONING state indicates the cluster is being created.
+                      \"RUNNING\" - The RUNNING state indicates the cluster has been
+                      created and is fully usable. \"RECONCILING\" - The RECONCILING
                       state indicates that some work is actively being done on the
                       cluster, such as upgrading the master or node software. Details
-                      can be found in the `statusMessage` field.   \"STOPPING\" -
-                      The STOPPING state indicates the cluster is being deleted.   \"ERROR\"
+                      can be found in the `statusMessage` field. \"STOPPING\" - The
+                      STOPPING state indicates the cluster is being deleted. \"ERROR\"
                       - The ERROR state indicates the cluster may be unusable. Details
-                      can be found in the `statusMessage` field.   \"DEGRADED\" -
-                      The DEGRADED state indicates the cluster requires user action
-                      to restore full functionality. Details can be found in the `statusMessage`
+                      can be found in the `statusMessage` field. \"DEGRADED\" - The
+                      DEGRADED state indicates the cluster requires user action to
+                      restore full functionality. Details can be found in the `statusMessage`
                       field."
                     type: string
                   statusMessage:
@@ -1541,7 +1809,7 @@ spec:
                       \n notation (e.g. `1.2.3.4/29`)."
                     type: string
                   zone:
-                    description: 'Zone: The name of the Google Compute Engine [zone](/compute/docs/zones#available)
+                    description: 'Zone: The name of the Google Compute Engine [zone](https://cloud.google.com/compute/docs/zones#available)
                       in which the cluster resides. This field is deprecated, use
                       location instead.'
                     type: string
@@ -1589,9 +1857,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

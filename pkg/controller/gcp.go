@@ -17,32 +17,31 @@ limitations under the License.
 package controller
 
 import (
-	"time"
-
-	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/crossplane/crossplane-runtime/pkg/logging"
+	"github.com/crossplane/crossplane-runtime/pkg/controller"
 
-	"github.com/crossplane/provider-gcp/pkg/controller/cache"
-	"github.com/crossplane/provider-gcp/pkg/controller/compute"
-	"github.com/crossplane/provider-gcp/pkg/controller/config"
-	"github.com/crossplane/provider-gcp/pkg/controller/container"
-	"github.com/crossplane/provider-gcp/pkg/controller/database"
-	"github.com/crossplane/provider-gcp/pkg/controller/dns"
-	"github.com/crossplane/provider-gcp/pkg/controller/iam"
-	"github.com/crossplane/provider-gcp/pkg/controller/kms"
-	"github.com/crossplane/provider-gcp/pkg/controller/pubsub"
-	"github.com/crossplane/provider-gcp/pkg/controller/servicenetworking"
-	"github.com/crossplane/provider-gcp/pkg/controller/storage"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/cache"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/compute"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/config"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/container"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/database"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/dns"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/iam"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/kms"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/pubsub"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/registry"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/servicenetworking"
+	"github.com/crossplane-contrib/provider-gcp/pkg/controller/storage"
 )
 
 // Setup creates all GCP controllers with the supplied logger and adds them to
 // the supplied manager.
-func Setup(mgr ctrl.Manager, l logging.Logger, rl workqueue.RateLimiter, poll time.Duration) error {
-	for _, setup := range []func(ctrl.Manager, logging.Logger, workqueue.RateLimiter, time.Duration) error{
+func Setup(mgr ctrl.Manager, o controller.Options) error {
+	for _, setup := range []func(ctrl.Manager, controller.Options) error{
 		cache.SetupCloudMemorystoreInstance,
 		compute.SetupGlobalAddress,
+		compute.SetupAddress,
 		compute.SetupNetwork,
 		compute.SetupSubnetwork,
 		compute.SetupFirewall,
@@ -50,6 +49,7 @@ func Setup(mgr ctrl.Manager, l logging.Logger, rl workqueue.RateLimiter, poll ti
 		container.SetupCluster,
 		container.SetupNodePool,
 		database.SetupCloudSQLInstance,
+		dns.SetupPolicy,
 		dns.SetupResourceRecordSet,
 		iam.SetupServiceAccount,
 		iam.SetupServiceAccountKey,
@@ -63,10 +63,11 @@ func Setup(mgr ctrl.Manager, l logging.Logger, rl workqueue.RateLimiter, poll ti
 		storage.SetupBucket,
 		storage.SetupBucketPolicy,
 		storage.SetupBucketPolicyMember,
+		registry.SetupContainerRegistry,
 	} {
-		if err := setup(mgr, l, rl, poll); err != nil {
+		if err := setup(mgr, o); err != nil {
 			return err
 		}
 	}
-	return config.Setup(mgr, l, rl)
+	return config.Setup(mgr, o)
 }

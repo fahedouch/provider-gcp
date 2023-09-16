@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Crossplane Authors.
+Copyright 2022 The Crossplane Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,20 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package googleapi
-
-import (
-	"net/http"
-
-	"google.golang.org/api/googleapi"
-)
-
-// IsErrorNotFound returns true if error of type *googleapi.Error and
-// error Code = 404
-func IsErrorNotFound(err error) bool {
-	apiErr, ok := err.(*googleapi.Error)
-	if !ok {
-		return false
-	}
-	return apiErr.Code == http.StatusNotFound
-}
+// Package v1alpha1 contains the core resources of the Google Cloud Platform.
+// +kubebuilder:object:generate=true
+// +groupName=gcp.crossplane.io
+// +versionName=v1alpha1
+package v1alpha1

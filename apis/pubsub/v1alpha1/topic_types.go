@@ -39,14 +39,31 @@ type TopicParameters struct {
 	// +optional
 	MessageStoragePolicy *MessageStoragePolicy `json:"messageStoragePolicy,omitempty"`
 
+	// MessageRetentionDuration: Indicates the minimum duration to retain a
+	// message after it is published to the topic. If this field is set,
+	// messages published to the topic in the last
+	// `message_retention_duration` are always available to subscribers. For
+	// instance, it allows any attached subscription to seek to a timestamp
+	// (https://cloud.google.com/pubsub/docs/replay-overview#seek_to_a_time)
+	// that is up to `message_retention_duration` in the past. If this field
+	// is not set, message retention is controlled by settings on individual
+	// subscriptions. Cannot be more than 31 days or less than 10 minutes.
+	//
+	// The duration must be in seconds, terminated by 's'. Example: "1200s".
+	// Avoid using fractional digits.
+	//
+	// +kubebuilder:validation:Pattern=[0-9]+s$
+	// +optional
+	MessageRetentionDuration *string `json:"messageRetentionDuration,omitempty"`
+
 	// KmsKeyName is the resource name of the Cloud KMS CryptoKey to be used to
 	// protect access to messages published on this topic.
 	//
 	// The expected format is `projects/*/locations/*/keyRings/*/cryptoKeys/*`.
 	// +optional
 	// +immutable
-	// +crossplane:generate:reference:type=github.com/crossplane/provider-gcp/apis/kms/v1alpha1.CryptoKey
-	// +crossplane:generate:reference:extractor=github.com/crossplane/provider-gcp/apis/kms/v1alpha1.CryptoKeyRRN()
+	// +crossplane:generate:reference:type=github.com/crossplane-contrib/provider-gcp/apis/kms/v1alpha1.CryptoKey
+	// +crossplane:generate:reference:extractor=github.com/crossplane-contrib/provider-gcp/apis/kms/v1alpha1.CryptoKeyRRN()
 	KmsKeyName *string `json:"kmsKeyName,omitempty"`
 
 	// KmsKeyNameRef allows you to specify custom resource name of the KMS Key

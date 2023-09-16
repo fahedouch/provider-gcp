@@ -18,27 +18,27 @@ package container
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	container "google.golang.org/api/container/v1"
-	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	"github.com/crossplane/crossplane-runtime/pkg/connection"
+	"github.com/crossplane/crossplane-runtime/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/event"
-	"github.com/crossplane/crossplane-runtime/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/ratelimiter"
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 
-	"github.com/crossplane/provider-gcp/apis/container/v1beta1"
-	gcp "github.com/crossplane/provider-gcp/pkg/clients"
-	np "github.com/crossplane/provider-gcp/pkg/clients/nodepool"
+	"github.com/crossplane-contrib/provider-gcp/apis/container/v1beta1"
+	scv1alpha1 "github.com/crossplane-contrib/provider-gcp/apis/v1alpha1"
+	gcp "github.com/crossplane-contrib/provider-gcp/pkg/clients"
+	np "github.com/crossplane-contrib/provider-gcp/pkg/clients/nodepool"
+	"github.com/crossplane-contrib/provider-gcp/pkg/features"
 )
 
 // Error strings.
@@ -54,22 +54,27 @@ const (
 
 // SetupNodePool adds a controller that reconciles NodePool managed
 // resources.
-func SetupNodePool(mgr ctrl.Manager, l logging.Logger, rl workqueue.RateLimiter, poll time.Duration) error {
+func SetupNodePool(mgr ctrl.Manager, o controller.Options) error {
 	name := managed.ControllerName(v1beta1.NodePoolGroupKind)
+
+	cps := []managed.ConnectionPublisher{managed.NewAPISecretPublisher(mgr.GetClient(), mgr.GetScheme())}
+	if o.Features.Enabled(features.EnableAlphaExternalSecretStores) {
+		cps = append(cps, connection.NewDetailsManager(mgr.GetClient(), scv1alpha1.StoreConfigGroupVersionKind, connection.WithTLSConfig(o.ESSOptions.TLSConfig)))
+	}
+
+	r := managed.NewReconciler(mgr,
+		resource.ManagedKind(v1beta1.NodePoolGroupVersionKind),
+		managed.WithExternalConnecter(&nodePoolConnector{kube: mgr.GetClient()}),
+		managed.WithPollInterval(o.PollInterval),
+		managed.WithLogger(o.Logger.WithValues("controller", name)),
+		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
+		managed.WithConnectionPublishers(cps...))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		WithOptions(controller.Options{
-			RateLimiter: ratelimiter.NewDefaultManagedRateLimiter(rl),
-		}).
+		WithOptions(o.ForControllerRuntime()).
 		For(&v1beta1.NodePool{}).
-		Complete(managed.NewReconciler(mgr,
-			resource.ManagedKind(v1beta1.NodePoolGroupVersionKind),
-			managed.WithExternalConnecter(&nodePoolConnector{kube: mgr.GetClient()}),
-			managed.WithReferenceResolver(managed.NewAPISimpleReferenceResolver(mgr.GetClient())),
-			managed.WithPollInterval(poll),
-			managed.WithLogger(l),
-			managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name)))))
+		Complete(ratelimiter.NewReconciler(name, r, o.GlobalRateLimiter))
 }
 
 type nodePoolConnector struct {
@@ -77,11 +82,11 @@ type nodePoolConnector struct {
 }
 
 func (c *nodePoolConnector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	projectID, opts, err := gcp.GetAuthInfo(ctx, c.kube, mg)
+	projectID, opts, err := gcp.GetConnectionInfo(ctx, c.kube, mg)
 	if err != nil {
 		return nil, err
 	}
-	s, err := container.NewService(ctx, opts)
+	s, err := container.NewService(ctx, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, errNewClient)
 	}

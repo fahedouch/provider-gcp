@@ -28,8 +28,8 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/test"
 
-	"github.com/crossplane/provider-gcp/apis/container/v1beta2"
-	gcp "github.com/crossplane/provider-gcp/pkg/clients"
+	"github.com/crossplane-contrib/provider-gcp/apis/container/v1beta2"
+	gcp "github.com/crossplane-contrib/provider-gcp/pkg/clients"
 )
 
 const (
@@ -341,6 +341,9 @@ func TestGenerateAddonsConfig(t *testing.T) {
 				cluster: &container.Cluster{},
 				params: params(func(p *v1beta2.ClusterParameters) {
 					p.AddonsConfig = &v1beta2.AddonsConfig{
+						CloudRunConfig: &v1beta2.CloudRunConfig{
+							Disabled: true,
+						},
 						HorizontalPodAutoscaling: &v1beta2.HorizontalPodAutoscaling{
 							Disabled: true,
 						},
@@ -349,6 +352,11 @@ func TestGenerateAddonsConfig(t *testing.T) {
 			},
 			want: cluster(func(c *container.Cluster) {
 				c.AddonsConfig = &container.AddonsConfig{
+					CloudRunConfig: &container.CloudRunConfig{
+						Disabled:         true,
+						LoadBalancerType: "LOAD_BALANCER_TYPE_UNSPECIFIED",
+						ForceSendFields:  []string{"Disabled", "LoadBalancerType"},
+					},
 					HorizontalPodAutoscaling: &container.HorizontalPodAutoscaling{
 						Disabled:        true,
 						ForceSendFields: []string{"Disabled"},
@@ -442,6 +450,25 @@ func TestGenerateAutoscaling(t *testing.T) {
 			want: cluster(func(c *container.Cluster) {
 				c.Autoscaling = &container.ClusterAutoscaling{
 					AutoprovisioningLocations:  []string{"here", "there"},
+					EnableNodeAutoprovisioning: true,
+				}
+			}),
+		},
+		"SuccessfulWithAutoscalingProfile": {
+			args: args{
+				cluster: cluster(),
+				params: params(func(p *v1beta2.ClusterParameters) {
+					p.Autoscaling = &v1beta2.ClusterAutoscaling{
+						AutoprovisioningLocations:  []string{"here", "there"},
+						AutoscalingProfile:         gcp.StringPtr("OPTIMIZE_UTILIZATION"),
+						EnableNodeAutoprovisioning: gcp.BoolPtr(true),
+					}
+				}),
+			},
+			want: cluster(func(c *container.Cluster) {
+				c.Autoscaling = &container.ClusterAutoscaling{
+					AutoprovisioningLocations:  []string{"here", "there"},
+					AutoscalingProfile:         "OPTIMIZE_UTILIZATION",
 					EnableNodeAutoprovisioning: true,
 				}
 			}),
@@ -1005,6 +1032,10 @@ func TestGenerateMasterAuthorizedNetworksConfig(t *testing.T) {
 }
 
 func TestGenerateNetworkConfig(t *testing.T) {
+	var clusterDNS = "CLOUD_DNS"
+	var clusterDNSDomain = "crossplane.io"
+	var clusterDNSScope = "VPC_SCOPE"
+
 	type args struct {
 		cluster *container.Cluster
 		params  *v1beta2.ClusterParameters
@@ -1020,12 +1051,22 @@ func TestGenerateNetworkConfig(t *testing.T) {
 				params: params(func(p *v1beta2.ClusterParameters) {
 					p.NetworkConfig = &v1beta2.NetworkConfigSpec{
 						EnableIntraNodeVisibility: gcp.BoolPtr(true),
+						DnsConfig: &v1beta2.DnsConfig{
+							ClusterDns:       &clusterDNS,
+							ClusterDnsDomain: &clusterDNSDomain,
+							ClusterDnsScope:  &clusterDNSScope,
+						},
 					}
 				}),
 			},
 			want: cluster(func(c *container.Cluster) {
 				c.NetworkConfig = &container.NetworkConfig{
 					EnableIntraNodeVisibility: true,
+					DnsConfig: &container.DNSConfig{
+						ClusterDns:       clusterDNS,
+						ClusterDnsDomain: clusterDNSDomain,
+						ClusterDnsScope:  clusterDNSScope,
+					},
 				}
 			}),
 		},
@@ -1392,6 +1433,11 @@ func TestGenerateWorkloadIdentityConfig(t *testing.T) {
 func TestLateInitializeSpec(t *testing.T) {
 	var adminUser = "admin"
 
+	var clusterDNS = "CLOUD_DNS"
+	var clusterDNSDomain = "crossplane.io"
+	var clusterDNSScope = "VPC_SCOPE"
+	var autoScalingProfile = "OPTIMIZE_UTILIZATION"
+
 	type args struct {
 		cluster *container.Cluster
 		params  *v1beta2.ClusterParameters
@@ -1411,8 +1457,18 @@ func TestLateInitializeSpec(t *testing.T) {
 							Disabled: true,
 						},
 					}
+					c.Autoscaling = &container.ClusterAutoscaling{
+						AutoscalingProfile: "OPTIMIZE_UTILIZATION",
+					}
 					c.IpAllocationPolicy = &container.IPAllocationPolicy{
 						ClusterIpv4CidrBlock: "0.0.0.0/0",
+					}
+					c.NetworkConfig = &container.NetworkConfig{
+						DnsConfig: &container.DNSConfig{
+							ClusterDns:       "CLOUD_DNS",
+							ClusterDnsDomain: "crossplane.io",
+							ClusterDnsScope:  "VPC_SCOPE",
+						},
 					}
 				}),
 				params: params(),
@@ -1424,8 +1480,18 @@ func TestLateInitializeSpec(t *testing.T) {
 							Disabled: true,
 						},
 					}
+					p.Autoscaling = &v1beta2.ClusterAutoscaling{
+						AutoscalingProfile: &autoScalingProfile,
+					}
 					p.IPAllocationPolicy = &v1beta2.IPAllocationPolicy{
 						ClusterIpv4CidrBlock: gcp.StringPtr("0.0.0.0/0"),
+					}
+					p.NetworkConfig = &v1beta2.NetworkConfigSpec{
+						DnsConfig: &v1beta2.DnsConfig{
+							ClusterDns:       &clusterDNS,
+							ClusterDnsDomain: &clusterDNSDomain,
+							ClusterDnsScope:  &clusterDNSScope,
+						},
 					}
 				}),
 			},
@@ -1438,6 +1504,9 @@ func TestLateInitializeSpec(t *testing.T) {
 							Disabled: true,
 						},
 					}
+					c.Autoscaling = &container.ClusterAutoscaling{
+						AutoscalingProfile: "BALANCED",
+					}
 					c.IpAllocationPolicy = &container.IPAllocationPolicy{
 						ClusterIpv4CidrBlock: "0.0.0.0/0",
 					}
@@ -1446,6 +1515,9 @@ func TestLateInitializeSpec(t *testing.T) {
 					}
 				}),
 				params: params(func(p *v1beta2.ClusterParameters) {
+					p.Autoscaling = &v1beta2.ClusterAutoscaling{
+						AutoscalingProfile: &autoScalingProfile,
+					}
 					p.MasterAuth = &v1beta2.MasterAuth{
 						Username: &adminUser,
 					}
@@ -1457,6 +1529,9 @@ func TestLateInitializeSpec(t *testing.T) {
 						HTTPLoadBalancing: &v1beta2.HTTPLoadBalancing{
 							Disabled: true,
 						},
+					}
+					p.Autoscaling = &v1beta2.ClusterAutoscaling{
+						AutoscalingProfile: &autoScalingProfile,
 					}
 					p.IPAllocationPolicy = &v1beta2.IPAllocationPolicy{
 						ClusterIpv4CidrBlock: gcp.StringPtr("0.0.0.0/0"),
@@ -1608,6 +1683,28 @@ func TestIsUpToDate(t *testing.T) {
 					c.NodePools = []*container.NodePool{np}
 				}),
 				params: params(),
+			},
+			want: want{
+				upToDate: false,
+				isErr:    false,
+			},
+		},
+		"NeedsUpdateDnsConfig": {
+			args: args{
+				name:    name,
+				cluster: cluster(),
+				params: params(func(p *v1beta2.ClusterParameters) {
+					var clusterDNS = "CLOUD_DNS"
+					var clusterDNSDomain = "crossplane.io"
+					var clusterDNSScope = "VPC_SCOPE"
+					p.NetworkConfig = &v1beta2.NetworkConfigSpec{
+						DnsConfig: &v1beta2.DnsConfig{
+							ClusterDns:       &clusterDNS,
+							ClusterDnsDomain: &clusterDNSDomain,
+							ClusterDnsScope:  &clusterDNSScope,
+						},
+					}
+				}),
 			},
 			want: want{
 				upToDate: false,

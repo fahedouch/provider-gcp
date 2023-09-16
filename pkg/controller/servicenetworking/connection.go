@@ -20,26 +20,27 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"time"
+
+	scv1alpha1 "github.com/crossplane-contrib/provider-gcp/apis/v1alpha1"
+	"github.com/crossplane-contrib/provider-gcp/pkg/features"
 
 	compute "google.golang.org/api/compute/v1"
 	servicenetworking "google.golang.org/api/servicenetworking/v1"
-	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	xpconnection "github.com/crossplane/crossplane-runtime/pkg/connection"
+	"github.com/crossplane/crossplane-runtime/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/event"
-	"github.com/crossplane/crossplane-runtime/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/pkg/ratelimiter"
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 
-	"github.com/crossplane/provider-gcp/apis/servicenetworking/v1beta1"
-	gcp "github.com/crossplane/provider-gcp/pkg/clients"
-	"github.com/crossplane/provider-gcp/pkg/clients/connection"
+	"github.com/crossplane-contrib/provider-gcp/apis/servicenetworking/v1beta1"
+	gcp "github.com/crossplane-contrib/provider-gcp/pkg/clients"
+	"github.com/crossplane-contrib/provider-gcp/pkg/clients/connection"
 )
 
 // Error strings.
@@ -75,22 +76,28 @@ const (
 
 // SetupConnection adds a controller that reconciles Connection
 // managed resources.
-func SetupConnection(mgr ctrl.Manager, l logging.Logger, rl workqueue.RateLimiter, poll time.Duration) error {
+func SetupConnection(mgr ctrl.Manager, o controller.Options) error {
 	name := managed.ControllerName(v1beta1.ConnectionGroupKind)
+
+	cps := []managed.ConnectionPublisher{managed.NewAPISecretPublisher(mgr.GetClient(), mgr.GetScheme())}
+	if o.Features.Enabled(features.EnableAlphaExternalSecretStores) {
+		cps = append(cps, xpconnection.NewDetailsManager(mgr.GetClient(), scv1alpha1.StoreConfigGroupVersionKind, xpconnection.WithTLSConfig(o.ESSOptions.TLSConfig)))
+	}
+
+	r := managed.NewReconciler(mgr,
+		resource.ManagedKind(v1beta1.ConnectionGroupVersionKind),
+		managed.WithExternalConnecter(&connector{client: mgr.GetClient()}),
+		managed.WithConnectionPublishers(),
+		managed.WithPollInterval(o.PollInterval),
+		managed.WithLogger(o.Logger.WithValues("controller", name)),
+		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name))),
+		managed.WithConnectionPublishers(cps...))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		WithOptions(controller.Options{
-			RateLimiter: ratelimiter.NewDefaultManagedRateLimiter(rl),
-		}).
+		WithOptions(o.ForControllerRuntime()).
 		For(&v1beta1.Connection{}).
-		Complete(managed.NewReconciler(mgr,
-			resource.ManagedKind(v1beta1.ConnectionGroupVersionKind),
-			managed.WithExternalConnecter(&connector{client: mgr.GetClient()}),
-			managed.WithConnectionPublishers(),
-			managed.WithReferenceResolver(managed.NewAPISimpleReferenceResolver(mgr.GetClient())),
-			managed.WithPollInterval(poll),
-			managed.WithLogger(l.WithValues("controller", name)),
-			managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorderFor(name)))))
+		Complete(ratelimiter.NewReconciler(name, r, o.GlobalRateLimiter))
 }
 
 type connector struct {
@@ -98,17 +105,17 @@ type connector struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	projectID, opts, err := gcp.GetAuthInfo(ctx, c.client, mg)
+	projectID, opts, err := gcp.GetConnectionInfo(ctx, c.client, mg)
 	if err != nil {
 		return nil, err
 	}
 
-	cmp, err := compute.NewService(ctx, opts)
+	cmp, err := compute.NewService(ctx, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, errNewClient)
 	}
 
-	sn, err := servicenetworking.NewService(ctx, opts)
+	sn, err := servicenetworking.NewService(ctx, opts...)
 	return &external{sn: sn, compute: cmp, projectID: projectID}, errors.Wrap(err, errNewClient)
 }
 

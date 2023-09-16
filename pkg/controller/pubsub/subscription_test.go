@@ -34,7 +34,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 	"github.com/crossplane/crossplane-runtime/pkg/test"
 
-	"github.com/crossplane/provider-gcp/apis/pubsub/v1alpha1"
+	"github.com/crossplane-contrib/provider-gcp/apis/pubsub/v1alpha1"
 )
 
 type SubscriptionOption func(subscription *v1alpha1.Subscription)
@@ -104,9 +104,11 @@ func TestSubscriptionObserve(t *testing.T) {
 						t.Errorf("r: -want, +got:\n%s", diff)
 					}
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(&pubsub.Subscription{
+					if err := json.NewEncoder(w).Encode(&pubsub.Subscription{
 						Topic: "my-topic",
-					})
+					}); err != nil {
+						t.Error(err)
+					}
 				}),
 				kube: &test.MockClient{
 					MockUpdate: test.NewMockUpdateFn(errBoom),
@@ -126,7 +128,9 @@ func TestSubscriptionObserve(t *testing.T) {
 						t.Errorf("r: -want, +got:\n%s", diff)
 					}
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(&pubsub.Subscription{})
+					if err := json.NewEncoder(w).Encode(&pubsub.Subscription{}); err != nil {
+						t.Error(err)
+					}
 				}),
 				mg: newSubscription(),
 			},
@@ -199,9 +203,11 @@ func TestSubscriptionCreate(t *testing.T) {
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					_ = r.Body.Close()
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(&pubsub.Subscription{
+					if err := json.NewEncoder(w).Encode(&pubsub.Subscription{
 						Topic: "my-topic",
-					})
+					}); err != nil {
+						t.Error(err)
+					}
 				}),
 				mg: newSubscription(),
 			},
@@ -272,9 +278,11 @@ func TestSubscriptionUpdate(t *testing.T) {
 						return
 					}
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(&pubsub.Subscription{
+					if err := json.NewEncoder(w).Encode(&pubsub.Subscription{
 						Topic: "my-topic",
-					})
+					}); err != nil {
+						t.Error(err)
+					}
 				}),
 				mg: newSubscription(),
 			},
@@ -288,9 +296,11 @@ func TestSubscriptionUpdate(t *testing.T) {
 				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					_ = r.Body.Close()
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(&pubsub.Subscription{
+					if err := json.NewEncoder(w).Encode(&pubsub.Subscription{
 						Topic: "my-topic",
-					})
+					}); err != nil {
+						t.Error(err)
+					}
 				}),
 				mg: newSubscription(),
 			},
@@ -373,9 +383,11 @@ func TestSubscriptionDelete(t *testing.T) {
 						t.Errorf("r: -want, +got:\n%s", diff)
 					}
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(&pubsub.Subscription{
+					if err := json.NewEncoder(w).Encode(&pubsub.Subscription{
 						Name: "cool-name",
-					})
+					}); err != nil {
+						t.Error(err)
+					}
 				}),
 				mg: newSubscription(),
 			},
